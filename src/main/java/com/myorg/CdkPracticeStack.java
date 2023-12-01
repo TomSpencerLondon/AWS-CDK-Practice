@@ -1,24 +1,37 @@
 package com.myorg;
 
+import java.util.UUID;
+import software.amazon.awscdk.Duration;
+import software.amazon.awscdk.services.events.Rule;
+import software.amazon.awscdk.services.events.Schedule;
+import software.amazon.awscdk.services.events.targets.LambdaFunction;
+import software.amazon.awscdk.services.lambda.SingletonFunction;
 import software.constructs.Construct;
 import software.amazon.awscdk.Stack;
-import software.amazon.awscdk.StackProps;
-// import software.amazon.awscdk.Duration;
-// import software.amazon.awscdk.services.sqs.Queue;
+import software.amazon.awscdk.services.lambda.Runtime;
+import software.amazon.awscdk.services.lambda.Code;
+
 
 public class CdkPracticeStack extends Stack {
-    public CdkPracticeStack(final Construct scope, final String id) {
-        this(scope, id, null);
-    }
+    public CdkPracticeStack(final Construct parent, final String name) {
+        super(parent, name);
 
-    public CdkPracticeStack(final Construct scope, final String id, final StackProps props) {
-        super(scope, id, props);
+        SingletonFunction lambdaFunction =
+            SingletonFunction.Builder.create(this, "cdk-lambda-cron")
+                .description("Lambda which prints \"I'm running\"")
+                .code(Code.fromInline("def main(event, context):\n" + "    print(\"I'm running!\")\n"))
+                .handler("index.main")
+                .timeout(Duration.seconds(300))
+                .runtime(Runtime.PYTHON_3_9)
+                .uuid(UUID.randomUUID().toString())
+                .build();
 
-        // The code that defines your stack goes here
+        Rule rule =
+            Rule.Builder.create(this, "cdk-lambda-cron-rule")
+                .description("Run every day at 6PM UTC")
+                .schedule(Schedule.expression("cron(0 18 ? * MON-FRI *)"))
+                .build();
 
-        // example resource
-        // final Queue queue = Queue.Builder.create(this, "CdkPracticeQueue")
-        //         .visibilityTimeout(Duration.seconds(300))
-        //         .build();
+        rule.addTarget(new LambdaFunction(lambdaFunction));
     }
 }
